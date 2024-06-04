@@ -10,12 +10,29 @@
 
 #include <png++/png.hpp>
 
-#include <cxxopts.hpp>
-
 using namespace std;
 
-#define DEFAULT_WIDTH  "2048"
-#define DEFAULT_HEIGHT "2048"
+#define DEFAULT_WIDTH  2048
+#define DEFAULT_HEIGHT 2048
+
+std::map<std::string, std::string> parseArgs(int argc, char* argv[]) {
+	std::map<std::string, std::string> args;
+
+	for (int i = 1; i < argc; ++i) {
+		std::string arg = argv[i];
+		if (arg[0] == '-') {
+			std::string key = arg.substr(1);
+			if ((i + 1) < argc && argv[i + 1][0] != '-') {
+				std::cout << key << ": " << argv[i + 1][0] << std::endl;
+				args[key] = argv[++i];
+			} else {
+				args[key] = "true";
+			}
+		}
+	}
+
+	return args;
+}
 
 struct Point {
 	double x, y, z;
@@ -180,33 +197,76 @@ class LasToHeightmap {
 
 };
 
-int main(int argc, char *argv[]) {
-	cxxopts::Options options("las2heightmap", "Convert las/laz files to png heightmap");
+void processPointsToGrayImage(png::image<png::gray_pixel_16> &output_image, LasToHeightmap &lasToHeightmap, unsigned int width, unsigned int height) {
+	for (unsigned int y = 0; y < height; y++) {
+		for (unsigned int x = 0; x < width; x++) {
+			Point p = lasToHeightmap.pointAt(x, y);
+			double z = p.z;
+			if (z < 0)
+				z = 0;
+			unsigned short iz = z * 256;
+			output_image[y][x] = png::gray_pixel_16(iz);
+		}
+	}
+}
 
-	options.add_options()
-		("i,input", "Input file", cxxopts::value<std::string>())
-		("o,output", "Output file", cxxopts::value<std::string>())
-		("W,width", "Output width", cxxopts::value<unsigned int>()->default_value(DEFAULT_WIDTH))
-		("H,height", "Output height", cxxopts::value<unsigned int>()->default_value(DEFAULT_HEIGHT))
-		("h,help", "Print usage")
-		;
+void processPointsToRGBImage(png::image<png::rgb_pixel> &output_image, LasToHeightmap &lasToHeightmap, unsigned int width, unsigned int height) {
+	for (unsigned int y = 0; y < height; y++) {
+		for (unsigned int x = 0; x < width; x++) {
+			Point p = lasToHeightmap.pointAt(x, y);
+			double z = p.z;
+			if (z < 0)
+				z = 0;
+			unsigned short iz = z * 256;
+			// output_image[y][x] = png::rgb_pixel(p.intensity, iz >> 8, iz & 0xff);
+			output_image[y][x] = png::rgb_pixel(z, z, z);
+		}
+	}
+}
+
+int main(int argc, char *argv[]) {
+	auto args = parseArgs(argc, argv);
+	for (const auto& [key, value] : args) {
+		std::cout << "-" << key << ": " << value << std::endl;
+	}
+
+	if (args.count("help") || args.count("h")) {
+		std::cout << "Usage: " << argv[0] << " -i <input file: required> -o <output file: required> -W <width: default 2048> -H <height: default: 2048>" << std::endl;
+		return 0;
+	}
+	
+	if (!args.count("i")) {
+		std::cout << "-i <input file> option is required" << std::endl;
+		return 1;
+	}
+	std::string input_filename = args["i"];
+	
+	if (!args.count("o")) {
+		std::cout << "-o <output file> option is required" << std::endl;
+		return 1;
+	}
+	std::string output_filename = args["o"];
+
+	unsigned int width = DEFAULT_WIDTH;
+	unsigned int height = DEFAULT_HEIGHT;
+	try {
+		if (args.count("W")) {
+			width = std::stoul(args["W"]);
+		}
+		if (args.count("H")) {
+			height = std::stoul(args["H"]);
+		}
+	} catch (const std::invalid_argument &e) {
+		std::cerr << "Error: Width and height must be valid integers." << std::endl;
+		return 1;
+	}
+	
+	bool is_gray = true;
+	if (args.count("rgb")) {
+		is_gray = false;
+	}
 
 	try {
-		auto result = options.parse(argc, argv);
-
-		if (result.count("help")) {
-			std::cout << options.help() << std::endl;
-			exit(0);
-		}
-
-		std::string input_filename = result["input"].as<std::string>();
-		std::string output_filename = result["output"].as<std::string>();
-
-		int width = result["width"].as<unsigned int>();
-		int height = result["height"].as<unsigned int>();
-
-		png::image<png::gray_pixel_16> output_image(width, height);
-
 		cout << "Collecting all points..." << endl;
 		pdal::Option las_opt("filename", input_filename);
 		pdal::Options las_opts;
@@ -215,25 +275,20 @@ int main(int argc, char *argv[]) {
 		lasToHeightmap.perform();
 
 		cout << "Creating heightmap..." << endl;
-		for (int y = 0; y < height; y++) {
-			for (int x = 0; x < width; x++) {
-				Point p = lasToHeightmap.pointAt(x, y);
-				double z = p.z;
-				if (z < 0)
-					z = 0;
-				unsigned short iz = z * 256;
-				//output_image[y][x] = png::rgb_pixel(p.intensity, iz >> 8, iz & 0xff);
-				//output_image[y][x] = png::rgb_pixel(z, z, z);
-				output_image[y][x] = png::gray_pixel_16(iz);
-			}
+		if (is_gray) {
+			png::image<png::gray_pixel_16> output_image(width, height);
+			processPointsToGrayImage(output_image, lasToHeightmap, width, height);
+			output_image.write(output_filename);
+		} else {
+			png::image<png::rgb_pixel> output_image(width, height);
+			processPointsToRGBImage(output_image, lasToHeightmap, width, height);
+			output_image.write(output_filename);
 		}
 
-		output_image.write(output_filename);
-	} catch (const cxxopts::OptionException &e) {
-		std::cerr << options.help() << std::endl;
-		std::cerr << std::endl;
+		// output_image.write(output_filename);
+	} catch (const std::exception &e) {
 		std::cerr << "ERROR: " << e.what() << std::endl;
-		exit(1);
+		return 1;
 	}
 
 	return 0;
