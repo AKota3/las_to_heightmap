@@ -2,3 +2,4 @@ las2heightmap
 *.o
 *.d
 *.png
+*.las
