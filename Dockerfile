@@ -1,6 +1,6 @@
 FROM debian:bullseye-20221219
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND = noninteractive
 
 RUN apt-get update -y \
   && apt-get update -y
