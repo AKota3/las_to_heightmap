@@ -117,11 +117,16 @@ class LasToHeightmap {
 
 		offsetX = las_header.minX();
 		offsetY = las_header.maxY();
+		
+		
+		//koko
+		offsetZ = 76;
 
-		offsetZ = -16;
-
-		scaleX = output_width/1000.0;
-		scaleY = -output_height/1000.0;
+		//scaleX = output_width/1000.0;
+		//scaleY = -output_height/1000.0;
+		//
+		scaleX = output_width / (las_header.maxX() - las_header.minX());//
+		scaleY = -output_height / (las_header.maxY() - las_header.minY());//
 
 		for (pdal::PointId idx = 0; idx < point_view->size(); ++idx) {
 			using namespace pdal::Dimension;
@@ -204,7 +209,8 @@ void processPointsToGrayImage(png::image<png::gray_pixel_16> &output_image, LasT
 			double z = p.z;
 			if (z < 0)
 				z = 0;
-			unsigned short iz = z * 256;
+			//koko
+			unsigned short iz = z * 4096;
 			output_image[y][x] = png::gray_pixel_16(iz);
 		}
 	}
@@ -217,7 +223,8 @@ void processPointsToRGBImage(png::image<png::rgb_pixel> &output_image, LasToHeig
 			double z = p.z;
 			if (z < 0)
 				z = 0;
-			unsigned short iz = z * 256;
+			//koko
+			unsigned short iz = z * 4096;
 			// output_image[y][x] = png::rgb_pixel(p.intensity, iz >> 8, iz & 0xff);
 			output_image[y][x] = png::rgb_pixel(z, z, z);
 		}
