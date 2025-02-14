@@ -1,6 +1,9 @@
 #include <memory>
 #include <iostream>
 #include <stdint.h>
+#include <fstream>
+#include <limits>
+#include <vector>
 
 #include <pdal/PointTable.hpp>
 #include <pdal/PointView.hpp>
@@ -114,6 +117,40 @@ class LasToHeightmap {
 		std::cerr << "Y: " << las_header.minY() << " to " << las_header.maxY() << std::endl;
 		std::cerr << "Z: " << las_header.minZ() << " to " << las_header.maxZ() << std::endl;
 		std::cerr << "output: " << output_width << "x" << output_height << std::endl;
+
+
+		output_image = las_header.minX();
+
+		std::cerr << "Calculate elevation min/max data." << std::endl;
+		//
+		// 最小値と最大値を計算してCSVに出力
+		double minX = las_header.minX();
+		double maxX = las_header.maxX();
+		double minY = las_header.minY();
+		double maxY = las_header.maxY();
+		double minZ = las_header.minZ();
+		double maxZ = las_header.maxZ();
+
+		std::cerr << "las_header.minX() = " << las_header.minX() << std::endl;
+		std::cerr << "las_header.maxX() = " << las_header.maxX() << std::endl;
+		std::cerr << "las_header.minY() = " << las_header.minY() << std::endl;
+		std::cerr << "las_header.maxY() = " << las_header.maxY() << std::endl;
+
+
+		std::cerr << "Calculate elevation min/max data." << std::endl;
+		// X, Y, Z の最小値と最大値をファイルに出力
+		std::ofstream outFile("elevation_min_max.csv");
+		if (outFile.is_open()) {
+    	outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
+    	outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
+    	outFile.close();
+    	std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
+		} else {
+    		std::cerr << "Error writing min/max data to file!" << std::endl;
+		}
+
+		//
+
 
 		offsetX = las_header.minX();
 		offsetY = las_header.maxY();
@@ -253,6 +290,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	std::string output_filename = args["o"];
+	std::string output_csv = args["elevation_csv"];
 
 	unsigned int width = DEFAULT_WIDTH;
 	unsigned int height = DEFAULT_HEIGHT;
@@ -293,6 +331,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// output_image.write(output_filename);
+		output_elevation.write(output_csv);
 	} catch (const std::exception &e) {
 		std::cerr << "ERROR: " << e.what() << std::endl;
 		return 1;
