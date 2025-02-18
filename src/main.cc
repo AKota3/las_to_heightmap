@@ -119,7 +119,7 @@ class LasToHeightmap {
 		std::cerr << "output: " << output_width << "x" << output_height << std::endl;
 
 
-		output_image = las_header.minX();
+		//output_elevation = las_header.minX();
 
 		std::cerr << "Calculate elevation min/max data." << std::endl;
 		//
@@ -141,11 +141,12 @@ class LasToHeightmap {
 		// X, Y, Z の最小値と最大値をファイルに出力
 		std::ofstream outFile("elevation_min_max.csv");
 		if (outFile.is_open()) {
-    	outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
-    	outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
-    	outFile.close();
-    	std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
-		} else {
+    		outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
+    		outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
+    		outFile.close();
+    		std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
+		} 
+		else {
     		std::cerr << "Error writing min/max data to file!" << std::endl;
 		}
 
@@ -324,14 +325,31 @@ int main(int argc, char *argv[]) {
 			png::image<png::gray_pixel_16> output_image(width, height);
 			processPointsToGrayImage(output_image, lasToHeightmap, width, height);
 			output_image.write(output_filename);
-		} else {
+		} 
+		else {
 			png::image<png::rgb_pixel> output_image(width, height);
 			processPointsToRGBImage(output_image, lasToHeightmap, width, height);
 			output_image.write(output_filename);
 		}
 
 		// output_image.write(output_filename);
-		output_elevation.write(output_csv);
+		/////////////
+	//	output_elevation.write(output_csv);
+		std::cerr << "Calculate elevation min/max data." << std::endl;
+		// X, Y, Z の最小値と最大値をファイルに出力
+		std::ofstream outFile("elevation_min_max.csv");
+		if (outFile.is_open()) {
+    	outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
+    	//outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
+    	outFile.close();
+    	std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
+		} 
+		else {
+    		std::cerr << "Error writing min/max data to file!" << std::endl;
+		}
+
+		//////////////
+
 	} catch (const std::exception &e) {
 		std::cerr << "ERROR: " << e.what() << std::endl;
 		return 1;

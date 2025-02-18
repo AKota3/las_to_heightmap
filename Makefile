@@ -6,6 +6,8 @@ TARGET = las2heightmap
 CLEANFILES = $(DEPFILES) $(OBJFILES) $(TARGET)
 CXXFLAGS ?= -O3 -g -Wall -Wextra $(shell libpng-config --cflags) $(shell pkg-config --cflags pdal)
 LIBS ?= `libpng-config --ldflags` `pkg-config --libs pdal`
+CXXFLAGS += -std=c++17
+
 
 # User configuration
 -include config.mk
