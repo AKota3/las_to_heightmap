@@ -337,7 +337,8 @@ int main(int argc, char *argv[]) {
 	//	output_elevation.write(output_csv);
 		std::cerr << "Calculate elevation min/max data." << std::endl;
 		// X, Y, Z の最小値と最大値をファイルに出力
-		std::ofstream outFile("elevation_min_max.csv");
+		//std::ofstream outFile("elevation_min_max.csv");
+		std::ofstream outFile(output_csv);
 		if (outFile.is_open()) {
     	outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
     	//outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
