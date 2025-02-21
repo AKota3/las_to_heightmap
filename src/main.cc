@@ -39,8 +39,9 @@ std::map<std::string, std::string> parseArgs(int argc, char* argv[]) {
 
 struct Point {
 	double x, y, z;
-	int classification;
-	uint8_t intensity;
+//	int classification;
+//	uint8_t intensity;
+	uint8_t r, g, b;
 
 	double distance2(const Point &p) const {
 		double dx = p.x - x;
@@ -75,15 +76,15 @@ class LasToHeightmap {
 	///
 
 
-	void addPoint(double x, double y, double z, int classification, int intensity) {
+	void addPoint(double x, double y, double z, uint16_t r, uint16_t g, uint16_t b){
 		x = (x - offsetX) * scaleX;
 		y = (y - offsetY) * scaleY;
 		z = (z - offsetZ);
-		intensity /= 256;
+		//intensity /= 256;
 
 		/* Skip vegetation, "other", and noise */
-		if (classification == 3 || classification == 4 || classification == 7 || classification == 8)
-			return;
+		//if (classification == 3 || classification == 4 || classification == 7 || classification == 8)
+		//	return;
 
 		if ((int)x >= output_width)
 			x = output_width - 1;
@@ -94,10 +95,20 @@ class LasToHeightmap {
 		if (y < 0)
 			y = 0;
 
-		if (intensity > 255)
-			intensity = 255;
+		//if (intensity > 255)
+		//	intensity = 255;
 
-		Point point = {x,y,z,classification,(uint8_t)intensity};
+		//Point point = {x,y,z,classification,(uint8_t)intensity};
+		//Point point = {x, y, z, r, g, b};
+
+		//std::cout << "r: " << r << ", g: " << g << ", b: " << b << std::endl;
+
+		// 16ビットから8ビットにスケーリング
+		uint8_t r8 = std::min(static_cast<uint16_t>(r / 256), (uint16_t)255);
+		uint8_t g8 = std::min(static_cast<uint16_t>(g / 256), (uint16_t)255);
+		uint8_t b8 = std::min(static_cast<uint16_t>(b / 256), (uint16_t)255);
+	
+		Point point = {x, y, z, r8, g8, b8};
 
 		pointsAt(x, y)->push_back(point);
 	}
@@ -134,13 +145,7 @@ class LasToHeightmap {
 		std::cerr << "Y: " << las_header.minY() << " to " << las_header.maxY() << std::endl;
 		std::cerr << "Z: " << las_header.minZ() << " to " << las_header.maxZ() << std::endl;
 		std::cerr << "output: " << output_width << "x" << output_height << std::endl;
-
-
-		//output_elevation = las_header.minX();
-
 		std::cerr << "Calculate elevation min/max data." << std::endl;
-		//
-		
 		// 最小値と最大値を計算してCSVに出力
 		minX = las_header.minX();
 		maxX = las_header.maxX();
@@ -148,17 +153,12 @@ class LasToHeightmap {
 		maxY = las_header.maxY();
 		minZ = las_header.minZ();
 		maxZ = las_header.maxZ();
-
-		
-		
-
 		//
 
 
 		offsetX = las_header.minX();
 		offsetY = las_header.maxY();
-		
-		
+
 		//koko
 		offsetZ = 76;
 
@@ -174,10 +174,14 @@ class LasToHeightmap {
 			double y = point_view->getFieldAs<double>(Id::Y, idx);
 			double z = point_view->getFieldAs<double>(Id::Z, idx);
 
-			int classification = point_view->getFieldAs<int>(Id::Classification, idx);
-			int intensity = point_view->getFieldAs<int>(Id::Intensity, idx);
-
-			addPoint(x, y, z, classification, intensity);
+		//	int classification = point_view->getFieldAs<int>(Id::Classification, idx);
+		//	int intensity = point_view->getFieldAs<int>(Id::Intensity, idx);
+			uint16_t r = point_view->getFieldAs<uint16_t>(Id::Red, idx);
+			uint16_t g = point_view->getFieldAs<uint16_t>(Id::Green, idx);
+			uint16_t b = point_view->getFieldAs<uint16_t>(Id::Blue, idx);
+			//addPoint(x, y, z, classification, intensity);
+		//	std::cout << "r: " << r << ", g: " << g << ", b: " << b << std::endl;
+			addPoint(x, y, z, r, g, b);
 		}
 	}
 
@@ -227,11 +231,11 @@ class LasToHeightmap {
 			if (representativePoint != neighbourPoints.end()) {
 				/* If we can find a point near out median z point, use its intensity */
 				//point.intensity = representativePoint->intensity;
-				point.intensity = representativePoint->intensity;
+				//point.intensity = representativePoint->intensity;
 			} else {
 				/* Otherwise, take the average */
 				cerr << "this should never happen" << endl;
-				point.intensity = 255; /*DEBUG*/
+				//point.intensity = 255; /*DEBUG*/
 			}
 
 			//point.intensity = medianPoint.intensity;
@@ -257,18 +261,19 @@ void processPointsToGrayImage(png::image<png::gray_pixel_16> &output_image, LasT
 }
 
 void processPointsToRGBImage(png::image<png::rgb_pixel> &output_image, LasToHeightmap &lasToHeightmap, unsigned int width, unsigned int height) {
-	for (unsigned int y = 0; y < height; y++) {
-		for (unsigned int x = 0; x < width; x++) {
-			Point p = lasToHeightmap.pointAt(x, y);
-			double z = p.z;
-			if (z < 0)
-				z = 0;
-			//koko
-			unsigned short iz = z * 4096;
-			// output_image[y][x] = png::rgb_pixel(p.intensity, iz >> 8, iz & 0xff);
-			output_image[y][x] = png::rgb_pixel(z, z, z);
-		}
-	}
+    for (unsigned int y = 0; y < height; y++) {
+        for (unsigned int x = 0; x < width; x++) {
+            std::vector<Point> *points = lasToHeightmap.pointsAt(x, y);
+            if (points && !points->empty()) {
+                Point p = points->front();
+                // R, G, Bを画像に反映
+                output_image[y][x] = png::rgb_pixel(p.r, p.g, p.b);
+            } else {
+                // 点がない場所は黒で塗りつぶし
+                output_image[y][x] = png::rgb_pixel(0, 0, 0);
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {

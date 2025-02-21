@@ -15,6 +15,7 @@ fs = gridfs.GridFS(db)  # GridFS の初期化
 # 入力ファイルと出力ファイルのパス
 input_file = '/data/1120PM_after_cut.las'
 output_file = '/data/outputTest.png'
+output_texture = '/data/outputTest.png'
 width = 2048
 height = 2048
 
@@ -29,6 +30,7 @@ command = [
     "las2heightmap", "-i", input_file, "-o", output_file, 
     "-W", str(width), "-H", str(height),
     "-elevation_csv", csv_file,  # 標高データをCSVとして出力
+   # "-rgb", "true",
 ]
 
 # subprocess でコマンドを実行
@@ -39,37 +41,7 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while running las2heightmap: {e}")
     exit(1)
 
-'''
-# 2. DockerコンテナIDを取得する
-get_container_id_command = [
-    "docker", "ps", "-q", "-f", "name=las2heightmap_container"  # 指定したコンテナ名でフィルタ
-]
-'''
-'''
-try:
-    container_id = subprocess.check_output(get_container_id_command).decode("utf-8").strip()
-    if not container_id:
-        raise Exception("Docker container not found.")
-    print(f"Docker container ID: {container_id}")
-except subprocess.CalledProcessError as e:
-    print(f"Error occurred while retrieving container ID: {e}")
-    exit(1)
 
-# 3. Docker内のCSVファイルをローカルに保存する
-csv_local_path = os.path.join(current_dir, 'elevation_min_max.csv')
-
-# docker cp コマンドでコンテナからローカルにファイルをコピー
-try:
-    docker_cp_command = [
-        "docker", "cp", f"{container_id}:{csv_file}", f"{csv_local_path}"
-    ]
-    subprocess.run(docker_cp_command, check=True)
-    print(f"CSVファイルをDockerコンテナからローカルにコピーしました: {csv_local_path}")
-except subprocess.CalledProcessError as e:
-    print(f"Error occurred while copying CSV file from Docker: {e}")
-    exit(1)
-
-'''
 # 4. chmod を実行してパーミッションを変更
 chmod_command = [
     "docker", "run", "--rm",
@@ -77,12 +49,6 @@ chmod_command = [
     "busybox", "chmod", "644", "/data/outputTest.png"  # busyboxを使ってchmodを実行
 ]
 
-# CSVファイルのパーミッション変更
-chmod_command_csv = [
-    "docker", "run", "--rm",
-    "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
-    "busybox", "chmod", "644", "/data/elevation_min_max.csv"  # CSVファイルのパーミッションを変更
-]
 
 # subprocess で chmod を実行
 try:
@@ -92,20 +58,10 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while changing permissions: {e}")
     exit(1)
 
-
-# CSVファイルのchmodを実行
-try:
-    subprocess.run(chmod_command_csv, check=True)
-    print(f"Permissions of {csv_file} changed successfully.")
-except subprocess.CalledProcessError as e:
-    print(f"Error occurred while changing permissions for the CSV: {e}")
-    exit(1)
-
 output_file = os.path.join(current_dir, 'outputTest.png')
 
 ##################
 # CSVファイルのパス
-#csv_file_path = '/data/elevation_min_max.csv'
 csv_file_path = os.path.join(current_dir, 'elevation_min_max.csv')
 
 # CSVファイルを開いて読み込む
@@ -141,8 +97,7 @@ try:
         # 画像データを GridFS に保存
         fs.put(f.read(), filename=os.path.basename(output_file), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
 
-   # file_id = fs.put(image_data, filename='outputTest.png')
-   # print(f"画像ファイルは MongoDB に保存されました。ファイルID: {file_id}")
+    print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
     print(f"Error occurred while saving image to MongoDB: {e}")
     exit(1)
