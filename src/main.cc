@@ -65,6 +65,15 @@ class LasToHeightmap {
 
 	int output_width;
 	int output_height;
+	/////
+	double minX;
+	double maxX;
+	double minY;
+	double maxY;
+	double minZ;
+	double maxZ;
+	///
+
 
 	void addPoint(double x, double y, double z, int classification, int intensity) {
 		x = (x - offsetX) * scaleX;
@@ -95,6 +104,14 @@ class LasToHeightmap {
 
 	public:
 
+	// ゲッター関数を追加
+    double getMinX() const { return minX; }
+    double getMaxX() const { return maxX; }
+    double getMinY() const { return minY; }
+    double getMaxY() const { return maxY; }
+    double getMinZ() const { return minZ; }
+    double getMaxZ() const { return maxZ; }
+
 	std::vector<Point> *pointMatrix;
 
 	LasToHeightmap(int width, int height, pdal::Options &las_opts) {
@@ -123,32 +140,17 @@ class LasToHeightmap {
 
 		std::cerr << "Calculate elevation min/max data." << std::endl;
 		//
+		
 		// 最小値と最大値を計算してCSVに出力
-		double minX = las_header.minX();
-		double maxX = las_header.maxX();
-		double minY = las_header.minY();
-		double maxY = las_header.maxY();
-		double minZ = las_header.minZ();
-		double maxZ = las_header.maxZ();
+		minX = las_header.minX();
+		maxX = las_header.maxX();
+		minY = las_header.minY();
+		maxY = las_header.maxY();
+		minZ = las_header.minZ();
+		maxZ = las_header.maxZ();
 
-		std::cerr << "las_header.minX() = " << las_header.minX() << std::endl;
-		std::cerr << "las_header.maxX() = " << las_header.maxX() << std::endl;
-		std::cerr << "las_header.minY() = " << las_header.minY() << std::endl;
-		std::cerr << "las_header.maxY() = " << las_header.maxY() << std::endl;
-
-
-		std::cerr << "Calculate elevation min/max data." << std::endl;
-		// X, Y, Z の最小値と最大値をファイルに出力
-		std::ofstream outFile("elevation_min_max.csv");
-		if (outFile.is_open()) {
-    		outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
-    		outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
-    		outFile.close();
-    		std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
-		} 
-		else {
-    		std::cerr << "Error writing min/max data to file!" << std::endl;
-		}
+		
+		
 
 		//
 
@@ -332,18 +334,17 @@ int main(int argc, char *argv[]) {
 			output_image.write(output_filename);
 		}
 
-		// output_image.write(output_filename);
-		/////////////
-	//	output_elevation.write(output_csv);
-		std::cerr << "Calculate elevation min/max data." << std::endl;
+		////////
 		// X, Y, Z の最小値と最大値をファイルに出力
-		//std::ofstream outFile("elevation_min_max.csv");
+		std::cerr << "Calculate elevation min/max data." << std::endl;
 		std::ofstream outFile(output_csv);
 		if (outFile.is_open()) {
-    	outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
-    	//outFile << minX << "," << maxX << "," << minY << "," << maxY << "," << minZ << "," << maxZ << "\n";
-    	outFile.close();
-    	std::cout << "Elevation min/max data written to elevation_min_max.csv" << std::endl;
+			outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";
+			outFile << lasToHeightmap.getMinX() << "," << lasToHeightmap.getMaxX() << ","
+					<< lasToHeightmap.getMinY() << "," << lasToHeightmap.getMaxY() << ","
+					<< lasToHeightmap.getMinZ() << "," << lasToHeightmap.getMaxZ() << "\n";
+			outFile.close();
+			std::cout << "Elevation min/max data written to " << output_csv << std::endl;
 		} 
 		else {
     		std::cerr << "Error writing min/max data to file!" << std::endl;
