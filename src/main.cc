@@ -160,7 +160,7 @@ class LasToHeightmap {
 		offsetY = las_header.maxY();
 
 		//koko
-		offsetZ = 76;
+		offsetZ = las_header.minZ();
 
 		//scaleX = output_width/1000.0;
 		//scaleY = -output_height/1000.0;
