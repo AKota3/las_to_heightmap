@@ -6,14 +6,16 @@ import io
 import os
 import csv
 from datetime import datetime
+import shutil
 
 # MongoDB に接続
 client = MongoClient('mongodb://localhost:27017/')  # MongoDB がローカルにある場合
-db = client['heightmap_db']  # データベース名
+#db = client['heightmap_db']  # データベース名
+db = client['rostmsdb']  # データベース名
 fs = gridfs.GridFS(db)  # GridFS の初期化
 
 # 入力ファイルと出力ファイルのパス
-input_file = '/data/las20240605.las'
+input_file = '/data/CollageWeb.las'
 output_file = '/data/outputTest.png'
 output_texture = '/data/outputTest.png'
 width = 2048
@@ -46,9 +48,8 @@ except subprocess.CalledProcessError as e:
 chmod_command = [
     "sudo", "docker", "run", "--rm",
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
-    "busybox", "chmod", "644", "/data/outputTest.png"  # busyboxを使ってchmodを実行
+    "busybox", "chmod", "755", "/data/outputTest.png"  # busyboxを使ってchmodを実行
 ]
-
 
 # subprocess で chmod を実行
 try:
@@ -58,7 +59,20 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while changing permissions: {e}")
     exit(1)
 
-output_file = os.path.join(current_dir, 'outputTest.png')
+'''
+# コピー元ファイルとコピー先ファイルのパス
+source_path = os.path.join(current_dir, 'outputTest.png')
+destination_path = os.path.join(current_dir, 'outputTestCopy.png')
+
+# ファイルをコピー（パーミッションはコピーされません）
+shutil.copy(source_path, destination_path)
+
+print(f"ファイル {source_path} が {destination_path} にコピーされました。")
+'''
+
+#output_file = os.path.join(current_dir, 'outputTest.png')
+#output_file = os.path.join(current_dir, 'outputTestCopy.png')
+output_file = 'outputTest.png'
 
 ##################
 # CSVファイルのパス
@@ -81,7 +95,7 @@ min_x, max_x, min_y, max_y, min_z, max_z = read_csv(csv_file_path)
 ######################
 # 現在の時刻を取得
 upload_time = datetime.now()
-StDytype = 'static'
+StDytype = 'heightmap'
 DataId = 4031
 DataHeight = float(max_x) - float(min_x)
 DataWidth = float(max_y) - float(min_y)
@@ -89,13 +103,13 @@ DataElevation = float(max_z) - float(min_z)
 DataKinds = 'heightmap'
 
 
-# 5. 画像ファイルを MongoDB に保存
+# 画像ファイルを MongoDB に保存
 try:
     with open(output_file, 'rb') as f:
-        image_data = f.read()
+        image_data = f.read()  # 画像データを一度読み取る
 
         # 画像データを GridFS に保存
-        fs.put(f.read(), filename=os.path.basename(output_file), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
+        fs.put(image_data, filename=os.path.basename(output_file), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
@@ -128,9 +142,9 @@ except subprocess.CalledProcessError as e:
 chmod_command_2 = [
     "sudo", "docker", "run", "--rm",
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
-    "busybox", "chmod", "644", "/data/outputTest.png"  # busyboxを使ってchmodを実行
+    "busybox", "chmod", "755", "/data/outputTest.png"  # busyboxを使ってchmodを実行
 ]
-
+#644
 
 # subprocess で chmod を実行
 try:
@@ -146,7 +160,7 @@ output_texture = os.path.join(current_dir, 'outputTest.png')
 ######################
 # 現在の時刻を取得
 upload_time = datetime.now()
-StDytype = 'static'
+StDytype = 'texture'
 DataId = 4031
 DataKinds = 'texture'
 
@@ -157,7 +171,7 @@ try:
         image_data = f.read()
 
         # 画像データを GridFS に保存
-        fs.put(f.read(), filename=os.path.basename(output_texture), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
+        fs.put(image_data, filename=os.path.basename(output_texture), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
