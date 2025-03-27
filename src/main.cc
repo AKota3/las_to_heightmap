@@ -125,12 +125,19 @@ class LasToHeightmap {
 
 	std::vector<Point> *pointMatrix;
 
-	LasToHeightmap(int width, int height, pdal::Options &las_opts) {
+	LasToHeightmap(int width, int height, pdal::Options &las_opts, double minZ_value, double minX_value, double maxX_value, double minY_value, double maxY_value) {
 		output_width = width;
 		output_height = height;
 		las_reader.setOptions(las_opts);
 
 		pointMatrix = new std::vector<Point>[width * height]();
+
+		// コマンドライン引数から渡された minZ を保持
+        minZ = minZ_value;
+		minX = minX_value;
+		maxX = maxX_value;
+		minY = minY_value;
+		maxY = maxY_value;
 	}
 
 	void perform() {
@@ -141,32 +148,35 @@ class LasToHeightmap {
 		pdal::Dimension::IdList dims = point_view->dims();
 		pdal::LasHeader las_header = las_reader.header();
 
-		std::cerr << "X: " << las_header.minX() << " to " << las_header.maxX() << std::endl;
-		std::cerr << "Y: " << las_header.minY() << " to " << las_header.maxY() << std::endl;
-		std::cerr << "Z: " << las_header.minZ() << " to " << las_header.maxZ() << std::endl;
+	//	std::cerr << "X: " << las_header.minX() << " to " << las_header.maxX() << std::endl;
+	//	std::cerr << "Y: " << las_header.minY() << " to " << las_header.maxY() << std::endl;
 		std::cerr << "output: " << output_width << "x" << output_height << std::endl;
 		std::cerr << "Calculate elevation min/max data." << std::endl;
 		// 最小値と最大値を計算してCSVに出力
-		minX = las_header.minX();
-		maxX = las_header.maxX();
-		minY = las_header.minY();
-		maxY = las_header.maxY();
-		minZ = las_header.minZ();
+		//minX = las_header.minX();
+		//maxX = las_header.maxX();
+		//minY = las_header.minY();
+		//maxY = las_header.maxY();
 		maxZ = las_header.maxZ();
 		//
+		std::cerr << "X: " << minX << " to " << maxX << std::endl;
+		std::cerr << "Y: " << minY << " to " << maxY << std::endl;
+		std::cerr << "Z: " << minZ << " to " << maxZ << std::endl;
 
 
-		offsetX = las_header.minX();
-		offsetY = las_header.maxY();
+		offsetX = minX;//las_header.minX();
+		offsetY = maxY;//las_header.maxY();
 
 		//koko
-		offsetZ = las_header.minZ();
+		offsetZ = minZ;
 
 		//scaleX = output_width/1000.0;
 		//scaleY = -output_height/1000.0;
 		//
-		scaleX = output_width / (las_header.maxX() - las_header.minX());//
-		scaleY = -output_height / (las_header.maxY() - las_header.minY());//
+		scaleX = output_width / (maxX - minX);//
+		//scaleX = output_width / (las_header.maxX() - las_header.minX());//
+		scaleY = -output_height / (maxY - minY);//
+		//scaleY = -output_height / (las_header.maxY() - las_header.minY());//
 
 		for (pdal::PointId idx = 0; idx < point_view->size(); ++idx) {
 			using namespace pdal::Dimension;
@@ -299,6 +309,12 @@ int main(int argc, char *argv[]) {
 	}
 	std::string output_filename = args["o"];
 	std::string output_csv = args["elevation_csv"];
+	float minX = std::stod(args["min_x"]);
+	float maxX = std::stod(args["max_x"]);
+	float minY = std::stod(args["min_y"]);
+	float maxY = std::stod(args["max_y"]);
+	float minZ = std::stod(args["min_z"]);
+	std::cerr << "minz = " << minZ << std::endl;
 
 	unsigned int width = DEFAULT_WIDTH;
 	unsigned int height = DEFAULT_HEIGHT;
@@ -324,7 +340,7 @@ int main(int argc, char *argv[]) {
 		pdal::Option las_opt("filename", input_filename);
 		pdal::Options las_opts;
 		las_opts.add(las_opt);
-		LasToHeightmap lasToHeightmap(width, height, las_opts);
+		LasToHeightmap lasToHeightmap(width, height, las_opts, minZ, minX, maxX, minY, maxY);
 		lasToHeightmap.perform();
 
 		cout << "Creating heightmap..." << endl;

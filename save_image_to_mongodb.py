@@ -1,23 +1,22 @@
 import subprocess
 from pymongo import MongoClient
 import gridfs
-from PIL import Image
-import io
 import os
 import csv
 from datetime import datetime
-import shutil
+import laspy
 
 # MongoDB に接続
 client = MongoClient('mongodb://localhost:27017/')  # MongoDB がローカルにある場合
-#db = client['heightmap_db']  # データベース名
-db = client['rostmsdb']  # データベース名
+db = client['heightmap_db']  # データベース名
+#db = client['rostmsdb']  # データベース名
 fs = gridfs.GridFS(db)  # GridFS の初期化
 
 # 入力ファイルと出力ファイルのパス
-input_file = '/data/CollageWeb.las'
+input_file_name = 'CollageWeb.las'
+input_file = '/data/' + input_file_name
 output_file = '/data/outputTest.png'
-output_texture = '/data/outputTest.png'
+output_texture = '/data/outputTest1.png'
 width = 2048
 height = 2048
 
@@ -25,14 +24,31 @@ csv_file = '/data/elevation_min_max.csv'
 # 現在の作業ディレクトリを取得
 current_dir = os.getcwd()
 
+####
+# LASファイルを読み込む
+las = laspy.read(input_file_name)  # 'path_to_your_file.las' を実際のファイルパスに置き換えてください
+# X, Y, Zの座標を取得
+x = las.x
+y = las.y
+z = las.z
+# 最大値と最小値を計算
+x_min, x_max = x.min(), x.max()
+y_min, y_max = y.min(), y.max()
+z_min, z_max = z.min(), z.max()
+# 結果を表示
+print(f"X座標の最小値: {x_min}, 最大値: {x_max}")
+print(f"Y座標の最小値: {y_min}, 最大値: {y_max}")
+print(f"Z座標の最小値: {z_min}, 最大値: {z_max}")
+####
+
 # 1. las2heightmap を実行して画像を生成
 command = [
     "sudo","docker", "run", "--name", "las2heightmap_container", "--rm",  # コンテナ名を指定
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
     "las2heightmap", "-i", input_file, "-o", output_file, 
     "-W", str(width), "-H", str(height),
-    "-elevation_csv", csv_file,  # 標高データをCSVとして出力
-   # "-rgb", "true",
+    "-elevation_csv", csv_file, 
+    "-min_x", str(x_min), "-max_x", str(x_max), "-min_y", str(y_min), "-max_y", str(y_max), "-min_z", str(z_min),
 ]
 
 # subprocess でコマンドを実行
@@ -59,19 +75,6 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while changing permissions: {e}")
     exit(1)
 
-'''
-# コピー元ファイルとコピー先ファイルのパス
-source_path = os.path.join(current_dir, 'outputTest.png')
-destination_path = os.path.join(current_dir, 'outputTestCopy.png')
-
-# ファイルをコピー（パーミッションはコピーされません）
-shutil.copy(source_path, destination_path)
-
-print(f"ファイル {source_path} が {destination_path} にコピーされました。")
-'''
-
-#output_file = os.path.join(current_dir, 'outputTest.png')
-#output_file = os.path.join(current_dir, 'outputTestCopy.png')
 output_file = 'outputTest.png'
 
 ##################
@@ -93,21 +96,18 @@ def read_csv(csv_file_path):
 # CSVファイルを読み込む
 min_x, max_x, min_y, max_y, min_z, max_z = read_csv(csv_file_path)
 ######################
-# 現在の時刻を取得
 upload_time = datetime.now()
 StDytype = 'heightmap'
 DataId = 4031
-DataHeight = float(max_x) - float(min_x)
-DataWidth = float(max_y) - float(min_y)
-DataElevation = float(max_z) - float(min_z)
+DataHeight = float(x_max) - float(x_min)
+DataWidth = float(y_max) - float(y_min)
+DataElevation = float(z_max) - float(z_min)
 DataKinds = 'heightmap'
-
 
 # 画像ファイルを MongoDB に保存
 try:
     with open(output_file, 'rb') as f:
         image_data = f.read()  # 画像データを一度読み取る
-
         # 画像データを GridFS に保存
         fs.put(image_data, filename=os.path.basename(output_file), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
 
@@ -115,7 +115,6 @@ try:
 except Exception as e:
     print(f"Error occurred while saving image to MongoDB: {e}")
     exit(1)
-
 
 ######################
 ######################
@@ -127,6 +126,7 @@ command_2 = [
     "-W", str(width), "-H", str(height),
     "-elevation_csv", csv_file,  # 標高データをCSVとして出力
     "-rgb", "true",
+    "-min_x", str(x_min), "-max_x", str(x_max), "-min_y", str(y_min), "-max_y", str(y_max), "-min_z", str(z_min),
 ]
 
 # subprocess でコマンドを実行
@@ -137,14 +137,12 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while running las2heightmap: {e}")
     exit(1)
 
-
 # 4. chmod を実行してパーミッションを変更
 chmod_command_2 = [
     "sudo", "docker", "run", "--rm",
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
     "busybox", "chmod", "755", "/data/outputTest.png"  # busyboxを使ってchmodを実行
 ]
-#644
 
 # subprocess で chmod を実行
 try:
