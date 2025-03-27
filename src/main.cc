@@ -148,15 +148,8 @@ class LasToHeightmap {
 		pdal::Dimension::IdList dims = point_view->dims();
 		pdal::LasHeader las_header = las_reader.header();
 
-	//	std::cerr << "X: " << las_header.minX() << " to " << las_header.maxX() << std::endl;
-	//	std::cerr << "Y: " << las_header.minY() << " to " << las_header.maxY() << std::endl;
 		std::cerr << "output: " << output_width << "x" << output_height << std::endl;
-		std::cerr << "Calculate elevation min/max data." << std::endl;
-		// 最小値と最大値を計算してCSVに出力
-		//minX = las_header.minX();
-		//maxX = las_header.maxX();
-		//minY = las_header.minY();
-		//maxY = las_header.maxY();
+
 		maxZ = las_header.maxZ();
 		//
 		std::cerr << "X: " << minX << " to " << maxX << std::endl;
@@ -314,7 +307,6 @@ int main(int argc, char *argv[]) {
 	float minY = std::stod(args["min_y"]);
 	float maxY = std::stod(args["max_y"]);
 	float minZ = std::stod(args["min_z"]);
-	std::cerr << "minz = " << minZ << std::endl;
 
 	unsigned int width = DEFAULT_WIDTH;
 	unsigned int height = DEFAULT_HEIGHT;
@@ -357,7 +349,6 @@ int main(int argc, char *argv[]) {
 
 		////////
 		// X, Y, Z の最小値と最大値をファイルに出力
-		std::cerr << "Calculate elevation min/max data." << std::endl;
 		std::ofstream outFile(output_csv);
 		if (outFile.is_open()) {
 			outFile << "X_min,X_max,Y_min,Y_max,Z_min,Z_max\n";

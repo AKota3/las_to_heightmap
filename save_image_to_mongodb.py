@@ -15,8 +15,12 @@ fs = gridfs.GridFS(db)  # GridFS の初期化
 # 入力ファイルと出力ファイルのパス
 input_file_name = 'CollageWeb.las'
 input_file = '/data/' + input_file_name
-output_file = '/data/outputTest.png'
-output_texture = '/data/outputTest1.png'
+output_heightmap_name =  'outputTest.png'
+output_heightmap = '/data/' + output_heightmap_name
+mongodb_heightmap_name =  'outputTest.png'
+output_texture_name = 'outputTest1.png'
+output_texture = '/data/' + output_texture_name
+mongodb_texture_name =  'outputTest.png'
 width = 2048
 height = 2048
 
@@ -45,7 +49,7 @@ print(f"Z座標の最小値: {z_min}, 最大値: {z_max}")
 command = [
     "sudo","docker", "run", "--name", "las2heightmap_container", "--rm",  # コンテナ名を指定
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
-    "las2heightmap", "-i", input_file, "-o", output_file, 
+    "las2heightmap", "-i", input_file, "-o", output_heightmap, 
     "-W", str(width), "-H", str(height),
     "-elevation_csv", csv_file, 
     "-min_x", str(x_min), "-max_x", str(x_max), "-min_y", str(y_min), "-max_y", str(y_max), "-min_z", str(z_min),
@@ -54,7 +58,7 @@ command = [
 # subprocess でコマンドを実行
 try:
     subprocess.run(command, check=True)
-    print(f"las2heightmap executed successfully. Output saved to {output_file}")
+    print(f"las2heightmap executed successfully. Output saved to {output_heightmap}")
 except subprocess.CalledProcessError as e:
     print(f"Error occurred while running las2heightmap: {e}")
     exit(1)
@@ -70,12 +74,10 @@ chmod_command = [
 # subprocess で chmod を実行
 try:
     subprocess.run(chmod_command, check=True)
-    print(f"Permissions of {output_file} changed successfully.")
+    print(f"Permissions of {output_heightmap} changed successfully.")
 except subprocess.CalledProcessError as e:
     print(f"Error occurred while changing permissions: {e}")
     exit(1)
-
-output_file = 'outputTest.png'
 
 ##################
 # CSVファイルのパス
@@ -89,7 +91,6 @@ def read_csv(csv_file_path):
         for row in csv_reader:
             # 行ごとにデータを処理
             min_x, max_x, min_y, max_y, min_z, max_z = row
-            print("reading csv")
             print(f"minX: {min_x}, maxX: {max_x}, minY: {min_y}, maxY: {max_y}, minZ: {min_z}, maxZ: {max_z}")
             return min_x, max_x, min_y, max_y, min_z, max_z  # 必要な値を返す
 
@@ -106,10 +107,10 @@ DataKinds = 'heightmap'
 
 # 画像ファイルを MongoDB に保存
 try:
-    with open(output_file, 'rb') as f:
+    with open(output_heightmap_name, 'rb') as f:
         image_data = f.read()  # 画像データを一度読み取る
         # 画像データを GridFS に保存
-        fs.put(image_data, filename=os.path.basename(output_file), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
+        fs.put(image_data, filename=mongodb_heightmap_name, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
@@ -152,7 +153,7 @@ except subprocess.CalledProcessError as e:
     print(f"Error occurred while changing permissions: {e}")
     exit(1)
 
-output_texture = os.path.join(current_dir, 'outputTest.png')
+output_texture_name = os.path.join(current_dir, output_texture_name)
 
 
 ######################
@@ -165,11 +166,11 @@ DataKinds = 'texture'
 
 # 5. 画像ファイルを MongoDB に保存
 try:
-    with open(output_texture, 'rb') as f:
+    with open(output_texture_name, 'rb') as f:
         image_data = f.read()
 
         # 画像データを GridFS に保存
-        fs.put(image_data, filename=os.path.basename(output_texture), time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
+        fs.put(image_data, filename=mongodb_texture_name, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
