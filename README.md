@@ -13,5 +13,5 @@ docker run --rm -v .:/data las2heightmap -i /path/to/input.las -o /path/to/outpu
 ```
 ## or
 ```
-python3 save_image_to_mongodb.py
+python3 save_image_to_mongodb.py <path to las data>.las  --output <output>.png
 ```

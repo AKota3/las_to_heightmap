@@ -5,15 +5,25 @@ import os
 import csv
 from datetime import datetime
 import laspy
+import argparse
+
+
+parser = argparse.ArgumentParser(description="LASファイルから画像を生成しMongoDBに保存する")
+parser.add_argument("las_file", help="入力LASファイルのファイル名（例: CollageWeb.las）")
+parser.add_argument("--output", help="出力画像のファイル名（例: output.png）", default="outputTest.png")
+args = parser.parse_args()
+
+#input_file_name = args.las_file
+input_file_name = os.path.basename(args.las_file)
 
 # MongoDB に接続
 client = MongoClient('mongodb://localhost:27017/')  # MongoDB がローカルにある場合
-db = client['heightmap_db']  # データベース名
-#db = client['rostmsdb']  # データベース名
+#db = client['heightmap_db']  # データベース名
+db = client['rostmsdb']  # データベース名
 fs = gridfs.GridFS(db)  # GridFS の初期化
 
 # 入力ファイルと出力ファイルのパス
-input_file_name = 'CollageWeb.las'
+#input_file_name = 'CollageWeb.las'
 input_file = '/data/' + input_file_name
 output_heightmap_name =  'outputTest.png'
 output_heightmap = '/data/' + output_heightmap_name
@@ -110,7 +120,7 @@ try:
     with open(output_heightmap_name, 'rb') as f:
         image_data = f.read()  # 画像データを一度読み取る
         # 画像データを GridFS に保存
-        fs.put(image_data, filename=mongodb_heightmap_name, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
+        fs.put(image_data, filename=args.output, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x=0, offset_y=0, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
@@ -170,7 +180,7 @@ try:
         image_data = f.read()
 
         # 画像データを GridFS に保存
-        fs.put(image_data, filename=mongodb_texture_name, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
+        fs.put(image_data, filename=args.output, time=upload_time , type=StDytype, id=DataId, height=DataHeight, width=DataWidth, elevation=DataElevation, offset_x = 00, offset_y = 00, DataType=DataKinds)
 
     print(f"画像ファイルは MongoDB に保存されました。")
 except Exception as e:
