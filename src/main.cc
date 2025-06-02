@@ -23,11 +23,20 @@ std::map<std::string, std::string> parseArgs(int argc, char* argv[]) {
 
 	for (int i = 1; i < argc; ++i) {
 		std::string arg = argv[i];
-		if (arg[0] == '-') {
+		
+		// キーになる条件："-"で始まり、かつ 2文字目が数字や "." ではない（例: "-i", "-min_x" は OK）
+		if (arg.size() > 1 && arg[0] == '-' && !std::isdigit(arg[1]) && arg[1] != '.') {
 			std::string key = arg.substr(1);
-			if ((i + 1) < argc && argv[i + 1][0] != '-') {
-				std::cout << key << ": " << argv[i + 1][0] << std::endl;
-				args[key] = argv[++i];
+			if ((i + 1) < argc) {
+				std::string next = argv[i + 1];
+				
+				// 次の値が別のオプションではなく、値であるときだけペアにする
+				if (next.size() > 0 && !(next[0] == '-' && !std::isdigit(next[1]) && next[1] != '.')) {
+					args[key] = next;
+					++i;
+				} else {
+					args[key] = "true";
+				}
 			} else {
 				args[key] = "true";
 			}

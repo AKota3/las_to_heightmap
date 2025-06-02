@@ -59,10 +59,12 @@ print(f"Z座標の最小値: {z_min}, 最大値: {z_max}")
 command = [
     "sudo","docker", "run", "--name", "las2heightmap_container", "--rm",  # コンテナ名を指定
     "-v", f"{current_dir}:/data",  # 現在のディレクトリを絶対パスで指定
-    "las2heightmap", "-i", input_file, "-o", output_heightmap, 
+    "las2heightmap", 
+    "-i", input_file, "-o", output_heightmap, 
+    "-min_x", str(x_min), "-max_x", str(x_max), "-min_y", str(y_min), "-max_y", str(y_max), "-min_z", str(z_min),
     "-W", str(width), "-H", str(height),
     "-elevation_csv", csv_file, 
-    "-min_x", str(x_min), "-max_x", str(x_max), "-min_y", str(y_min), "-max_y", str(y_max), "-min_z", str(z_min),
+    
 ]
 
 # subprocess でコマンドを実行
